@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time ECG Visualization</title>
+    <!-- Include Plotly.js for plotting -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Real-time ECG Data Visualization</h1>
+    <div id="ecg-visualization"></div>
+
+    <script>
+        const maxDataPoints = 100;  // Adjust the number of data points shown in the sliding window
+        let ecgData = [];
+
+        // Function to fetch data from Flask endpoint
+        async function fetchData() {
+            const response = await fetch('/messages');
+            const data = await response.json();
+            return data;
+        }
+
+        // Function to update Plotly graph with received data
+        async function updatePlot() {
+            const data = await fetchData();
+
+            // Update ecgData with the latest data
+            ecgData = ecgData.concat(data).slice(-maxDataPoints);
+
+            const layout = {
+                title: 'ECG Data',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Amplitude' },
+            };
+
+            const trace = {
+                x: Array.from(Array(ecgData.length).keys()),  // Use index as x values
+                y: ecgData,
+                mode: 'lines',  // Line chart for ECG data
+            };
+
+            Plotly.newPlot('ecg-visualization', [trace], layout);
+        }
+
+        // Call updatePlot function initially and then every 1 second (adjust as needed)
+        updatePlot();
+        setInterval(updatePlot, 1000);  // Update plot every 1 second (1000 ms)
+    </script>
+</body>
+</html>
