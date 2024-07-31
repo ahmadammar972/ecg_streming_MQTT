@@ -4,7 +4,7 @@ import paho.mqtt.client as mqtt
 import matplotlib.pyplot as plt
 
 # MQTT settings
-MQTT_BROKER = 'localhost'
+MQTT_BROKER = '199.212.33.168'
 MQTT_PORT = 1883
 MQTT_TOPIC = 'ecg_data'
 
@@ -30,7 +30,7 @@ ecg_pqrst_data = [
     # Heartbeat 5
     0.0, 0.1, 0.2, 0.1, 0.0, -0.1, 0.2, 0.6, 1.2, 0.7, 0.2, 0.1, 0.0, -0.1, -0.2, 0.0, 0.2, 0.0 
 ]
-
+"""
 # Plot the PQRST complex data
 plt.figure(figsize=(12, 5))
 plt.plot(ecg_pqrst_data, label='PQRST Complex Signal')
@@ -40,7 +40,7 @@ plt.title('ECG Signal (PQRST Complex) for 5 Heartbeats')
 plt.legend()
 plt.grid(True)
 plt.show()
-
+"""
 # Publish ECG data
 while True:
     for ecg_value in ecg_pqrst_data:

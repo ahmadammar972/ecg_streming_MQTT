@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Card ECG View</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Card ECG View</h1>
+    <form id="ecgForm">
+        <label for="patient_id">Patient ID:</label>
+        <select id="patient_id" name="patient_id">
+            {% for patient_id in patient_ids %}
+                <option value="{{ patient_id }}">{{ patient_id }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date">
+        <br>
+        <label for="start_time">Start Time:</label>
+        <input type="time" id="start_time" name="start_time">
+        <br>
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date">
+        <br>
+        <label for="end_time">End Time:</label>
+        <input type="time" id="end_time" name="end_time">
+        <br>
+        <button type="button" onclick="fetchECGData()">Submit</button>
+    </form>
+    <div id="ecgGraph"></div>
+    <script>
+        function fetchECGData() {
+            const patient_id = document.getElementById('patient_id').value;
+            const start_date = document.getElementById('start_date').value + ' ' + document.getElementById('start_time').value;
+            const end_date = document.getElementById('end_date').value + ' ' + document.getElementById('end_time').value;
+
+            fetch('/getECGData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    patient_id: patient_id,
+                    start_date: start_date,
+                    end_date: end_date
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const timestamps = data.timestamps;
+                const values = data.values;
+                const trace = {
+                    x: timestamps,
+                    y: values,
+                    type: 'scatter'
+                };
+                const layout = {
+                    title: 'ECG Data',
+                    xaxis: { title: 'Time' },
+                    yaxis: { title: 'ECG Value' }
+                };
+                Plotly.newPlot('ecgGraph', [trace], layout);
+            })
+            .catch(error => {
+                console.error('Error fetching ECG data:', error);
+            });
+        }
+    </script>
+</body>
+</html>

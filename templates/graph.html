@@ -3,50 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time ECG Visualization</title>
-    <!-- Include Plotly.js for plotting -->
+    <title>ECG Data Graph</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        #graph-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .graph {
+            width: 48%;
+            height: 600px;
+            display: inline-block;
+            margin: 1%;
+            position: relative;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Empty_ECG_paper.jpg'); /* Updated to PNG */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            display: none;
+        }
+        .graph > .plot-container .main-svg {
+            background: none !important;
+        }
+    </style>
 </head>
 <body>
-    <h1>Real-time ECG Data Visualization</h1>
-    <div id="ecg-visualization"></div>
-
+    <div>
+        <label for="lead-select">Select Lead:</label>
+        <select id="lead-select" onchange="updateGraph()">
+            <option value="one">One Lead</option>
+            <option value="three">Three Leads</option>
+            <option value="full">Full Lead</option>
+        </select>
+        <input type="checkbox" id="background-toggle" onchange="toggleBackground()" />
+        <label for="background-toggle">Show ECG Sheet</label>
+    </div>
+    <div id="graph-container">
+        <div id="graph1" class="graph">
+            <div class="overlay"></div>
+        </div>
+    </div>
     <script>
-        const maxDataPoints = 100;  // Adjust the number of data points shown in the sliding window
-        let ecgData = [];
+        let showBackground = false;
 
-        // Function to fetch data from Flask endpoint
-        async function fetchData() {
-            const response = await fetch('/messages');
-            const data = await response.json();
-            return data;
+        function toggleBackground() {
+            showBackground = document.getElementById('background-toggle').checked;
+            const overlays = document.querySelectorAll('.overlay');
+            overlays.forEach(overlay => {
+                overlay.style.display = showBackground ? 'block' : 'none';
+            });
+            updateGraph();
         }
 
-        // Function to update Plotly graph with received data
-        async function updatePlot() {
-            const data = await fetchData();
+        // Function to create graph divs dynamically
+        function createGraphDivs(numberOfGraphs) {
+            const container = document.getElementById('graph-container');
+            container.innerHTML = ''; // Clear existing graphs
+            for (let i = 1; i <= numberOfGraphs; i++) {
+                const graphDiv = document.createElement('div');
+                graphDiv.id = 'graph' + i;
+                graphDiv.className = 'graph';
 
-            // Update ecgData with the latest data
-            ecgData = ecgData.concat(data).slice(-maxDataPoints);
+                const overlayDiv = document.createElement('div');
+                overlayDiv.className = 'overlay';
+                if (showBackground) {
+                    overlayDiv.style.display = 'block';
+                }
 
-            const layout = {
-                title: 'ECG Data',
-                xaxis: { title: 'Time' },
-                yaxis: { title: 'Amplitude' },
-            };
-
-            const trace = {
-                x: Array.from(Array(ecgData.length).keys()),  // Use index as x values
-                y: ecgData,
-                mode: 'lines',  // Line chart for ECG data
-            };
-
-            Plotly.newPlot('ecg-visualization', [trace], layout);
+                graphDiv.appendChild(overlayDiv);
+                container.appendChild(graphDiv);
+            }
         }
 
-        // Call updatePlot function initially and then every 1 second (adjust as needed)
-        updatePlot();
-        setInterval(updatePlot, 1000);  // Update plot every 1 second (1000 ms)
+        // Function to fetch the latest 100 records and update the graphs
+        function updateGraph() {
+            fetch('/messages')
+                .then(response => response.json())
+                .then(data => {
+                    // Only keep the last 100 records
+                    let len = data.id.length;
+                    let startIndex = len > 100 ? len - 100 : 0;
+
+                    let recentIds = data.id.slice(startIndex, len);
+                    let recentValues = data.value.slice(startIndex, len);
+
+                    // Get the selected lead option
+                    const selectedLead = document.getElementById('lead-select').value;
+
+                    // Determine the number of graphs based on the selected lead
+                    let numberOfGraphs;
+                    switch (selectedLead) {
+                        case 'one':
+                            numberOfGraphs = 1;
+                            break;
+                        case 'three':
+                            numberOfGraphs = 3;
+                            break;
+                        case 'full':
+                            numberOfGraphs = 6;
+                            break;
+                    }
+
+                    // Create graph divs
+                    createGraphDivs(numberOfGraphs);
+
+                    // Prepare and render data for each graph
+                    for (let i = 1; i <= numberOfGraphs; i++) {
+                        const trace = {
+                            x: recentIds,
+                            y: i === 1 ? recentValues.map(value => value + (i - 1) * 0.1) : new Array(recentIds.length).fill(0), // Adjusted for visual differentiation
+                            mode: 'lines+markers',
+                            type: 'scatter'
+                        };
+
+                        const layout = {
+                            title: `ECG Data Visualization - Lead ${i}`,
+                            xaxis: {
+                                title: 'ID'
+                            },
+                            yaxis: {
+                                title: 'Value'
+                            },
+                            paper_bgcolor: 'rgba(0,0,0,0)',
+                            plot_bgcolor: 'rgba(0,0,0,0)',
+                            margin: { l: 50, r: 50, b: 50, t: 50 },
+                        };
+
+                        const plotData = [trace];
+
+                        // Render the graph
+                        Plotly.react('graph' + i, plotData, layout);
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Update the graph every 1 second (1000 milliseconds)
+        setInterval(updateGraph, 1000);
+
+        // Initial graph rendering
+        updateGraph();
     </script>
 </body>
 </html>
+
